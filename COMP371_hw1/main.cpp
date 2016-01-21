@@ -2,8 +2,8 @@
 
 #include "glfw3.h"  // include GLFW helper library
 
-#include "glm.hpp"
-#include "gtc/matrix_transform.hpp"
+#include "glm.hpp"					// vector types
+#include "gtc/matrix_transform.hpp"	// matrix types
 #include "gtc/type_ptr.hpp"
 #include "gtc/constants.hpp"
 
