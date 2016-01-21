@@ -45,17 +45,17 @@ GLfloat point_size = 3.0f;
 
 // An array of 3 vectors which represents 3 vertices
 static const GLfloat g_vertex_buffer_data[] = {
-	-1.0f, -1.0f, 0.0f,
-	1.0f, -1.0f, 0.0f,
-	0.0f,  1.0f, 0.0f,
+	-0.5f, -0.5f, 0.0f,
+	0.5f, -0.5f, 0.0f,
+	0.0f,  0.5f, 0.0f,
 };
 
 ///Handle the keyboard input
 void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods) {
-	switch (key) {
-	default: break;
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	{
+		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
-	return;
 }
 
 
