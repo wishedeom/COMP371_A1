@@ -19,7 +19,7 @@
 #include <vector>
 #include <cctype>
 
-using namespace std;
+//using namespace std;
 
 #define M_PI        3.14159265358979323846264338327950288   /* pi */
 #define DEG_TO_RAD	M_PI/180.0f
@@ -60,7 +60,11 @@ void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods
 
 /// Handle mouse input
 void cursorPositionCallback(GLFWwindow* _window, double xpos, double ypos) {
-	// Nothing yet
+	// Test only!
+	std::cout << "(" << xpos << ", " << ypos << ")" << std::endl;
+	view_matrix = glm::rotate(glm::mat4(), (float) (xpos / 800 * M_PI), glm::vec3(0.0f, 1.0f, 0.0f));
+	double scale = ypos / 400;
+	view_matrix = glm::scale(view_matrix, glm::vec3(scale, scale, scale));
 }
 
 
