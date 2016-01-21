@@ -50,12 +50,17 @@ static const GLfloat g_vertex_buffer_data[] = {
 	0.0f,  0.5f, 0.0f,
 };
 
-///Handle the keyboard input
+/// Handle the keyboard input
 void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods) {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
+}
+
+/// Handle mouse input
+void cursorPositionCallback(GLFWwindow* _window, double xpos, double ypos) {
+	// Nothing yet
 }
 
 
@@ -79,6 +84,9 @@ bool initialize() {
 	glfwGetWindowSize(window, &w, &h);
 	///Register the keyboard callback function: keyPressed(...)
 	glfwSetKeyCallback(window, keyPressed);
+
+	///Regster the mouse cursor position callback function: cursorPositionCallback(...)
+	glfwSetCursorPosCallback(window, cursorPositionCallback);
 
 	glfwMakeContextCurrent(window);
 
