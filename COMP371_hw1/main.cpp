@@ -60,11 +60,6 @@ void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods
 
 /// Handle mouse input
 void cursorPositionCallback(GLFWwindow* _window, double xpos, double ypos) {
-	// Test only!
-	std::cout << "(" << xpos << ", " << ypos << ")" << std::endl;
-	view_matrix = glm::rotate(glm::mat4(), (float) (xpos / 800 * M_PI), glm::vec3(0.0f, 1.0f, 0.0f));
-	double scale = ypos / 400;
-	view_matrix = glm::scale(view_matrix, glm::vec3(scale, scale, scale));
 }
 
 
