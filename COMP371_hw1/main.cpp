@@ -21,7 +21,7 @@
 
 //using namespace std;
 
-#define M_PI        3.14159265358979323846264338327950288   /* pi */
+#define M_PI        3.14159265358979323846264338327950288f   /* pi */
 #define DEG_TO_RAD	M_PI/180.0f
 
 GLFWwindow* window = 0x00;
@@ -36,18 +36,20 @@ GLuint proj_matrix_id = 0;
 // Constant vectors
 const glm::vec3 center		(0.0f, 0.0f,  0.0f);
 const glm::vec3 up			(0.0f, 1.0f,  0.0f);
+const glm::vec3 left		(1.0f, 0.0f,  0.0f);
 const glm::vec3 initialEye	(0.0f, 0.0f, -1.0f);
 
-// Screen
-int width, height;
+// Screen size
+int width  = 800;
+int height = 800;
 
 // Eye
 
 glm::vec3 eye = initialEye;
 
 ///Transformations
-glm::mat4 proj_matrix = glm::perspective(60.0f, 1.0f, 0.1f, 10000.0f);
-glm::mat4 view_matrix;
+glm::mat4 proj_matrix = glm::perspective(45.0f, 1.0f, 0.1f, 10000.0f);
+glm::mat4 view_matrix(1.0);
 glm::mat4 model_matrix;
 
 
@@ -74,6 +76,18 @@ void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods
 				glfwSetWindowShouldClose(window, GL_TRUE);
 			}
 			break;
+		case GLFW_KEY_LEFT:
+			model_matrix = glm::rotate(model_matrix, glm::radians(10.0f), up);
+			break;
+		case GLFW_KEY_RIGHT:
+			model_matrix = glm::rotate(model_matrix, glm::radians(-10.0f), up);
+			break;
+		case GLFW_KEY_UP:
+			model_matrix = glm::rotate(model_matrix, glm::radians(10.0f), left);
+			break;
+		case GLFW_KEY_DOWN:
+			model_matrix = glm::rotate(model_matrix, glm::radians(-10.0f), left);
+			break;
 		default:
 			break;
 	}
@@ -92,7 +106,7 @@ void cursorPositionCallback(GLFWwindow* _window, double xpos, double ypos)
 
 	if (mouseButtonLeftDown)
 	{
-		eye = (float)((mousePosY - mousePosY_down) / (height / 2) + 1) * eyeMouseDown;
+		eye = (float) ((mousePosY - mousePosY_down) / (height / 2) + 1) * eyeMouseDown;
 	}
 }
 
@@ -115,9 +129,41 @@ void mouseButtonCallback(GLFWwindow* _window, int button, int action, int mods)
 	}
 }
 
+// Vertex data
+int numSpans;
+int numProfileCurvePoints;
+int numTrajectoryCurvePoints;
+
+std::vector<glm::vec3> profileCurve;
+std::vector<glm::vec3> trajectoryCurve;
 
 bool initialize()
 {
+	std::ifstream vertexDataFile("input_a1.txt");
+	if (vertexDataFile.is_open())
+	{
+		vertexDataFile >> numSpans;
+		std::cout << numSpans << std::endl; //
+		vertexDataFile >> numProfileCurvePoints;
+		std::cout << numProfileCurvePoints << std::endl; //
+
+		for (int i = 0; i < numProfileCurvePoints; i++)
+		{
+			int x, y, z;
+			vertexDataFile >> x;
+			vertexDataFile >> y;
+			vertexDataFile >> z;
+			profileCurve.push_back(glm::vec3(x, y, z));
+			std::cout << "(" << profileCurve[i].x << ", " << profileCurve[i].y << ", " << profileCurve[i].z << ")" << std::endl;
+		}
+
+		vertexDataFile.close();
+	}
+	else
+	{
+		std::cout << "Unable to open file.";
+	}
+
 	/// Initialize GL context and O/S window using the GLFW helper library
 	if (!glfwInit())
 	{
@@ -127,7 +173,7 @@ bool initialize()
 
 	/// Create a window of size 640x480 and with title "Lecture 2: First Triangle"
 	glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
-	window = glfwCreateWindow(800, 800, "COMP371: Assignment 1", NULL, NULL);
+	window = glfwCreateWindow(width, height, "COMP371: Assignment 1", NULL, NULL);
 	if (!window)
 	{
 		fprintf(stderr, "ERROR: could not open window with GLFW3\n");
