@@ -192,8 +192,23 @@ bool initialize()
 	for (int i = 0; i < trajectoryCurve.size() - 1; i++)
 	{
 		trajectoryCurveDiff.push_back(trajectoryCurve[i + 1] - trajectoryCurve[i]);
-		std::cout << "(" << trajectoryCurveDiff[i].x << ", " << trajectoryCurveDiff[i].y << ", " << trajectoryCurveDiff[i].z << ")" << std::endl;
 	}
+
+	static std::vector<glm::vec3> translationalSweep = profileCurve;
+	for (auto trajectoryVector : trajectoryCurveDiff)
+	{
+		for (auto profileCurveVertex : profileCurve)
+		{
+			translationalSweep.push_back(profileCurveVertex + trajectoryVector);
+		}
+	}
+
+	// Test
+	for (auto vector : translationalSweep)
+	{
+		std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+	}
+	// End test
 
 	// Compute translational span vertices
 	//triangle_vertex_buffer_data = GLfloat[profileCurve.size() * trajectoryCurve.size()];
