@@ -48,7 +48,7 @@ int height = 800;
 glm::vec3 eye = initialEye;
 
 ///Transformations
-glm::mat4 proj_matrix = glm::perspective(45.0f, 1.0f, 0.1f, 10000.0f);
+glm::mat4 proj_matrix = glm::perspective(45.0f, (float) height / width, 0.1f, 10000.0f);
 glm::mat4 view_matrix(1.0);
 glm::mat4 model_matrix;
 
@@ -58,11 +58,11 @@ GLuint VBO, VAO, EBO;
 GLfloat point_size = 3.0f;
 
 // An array of 3 vectors which represents 3 vertices
-static const GLfloat g_vertex_buffer_data[] =
+static const GLfloat triangle_vertex_buffer_data[] =
 {
-	-0.5f, -0.5f, 0.0f,
-	 0.5f, -0.5f, 0.0f,
-	 0.0f,  0.5f, 0.0f,
+	-0.5f,	-0.5f,	0.0f,
+	 0.5f,	-0.5f,	0.0f,
+	 0.0f,	 0.5f,	0.0f
 };
 
 /// Handle the keyboard input
@@ -70,26 +70,26 @@ void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods
 {
 	switch (key)
 	{
-		case GLFW_KEY_ESCAPE:
-			if (action == GLFW_PRESS)
-			{
-				glfwSetWindowShouldClose(window, GL_TRUE);
-			}
-			break;
-		case GLFW_KEY_LEFT:
-			model_matrix = glm::rotate(model_matrix, glm::radians(10.0f), up);
-			break;
-		case GLFW_KEY_RIGHT:
-			model_matrix = glm::rotate(model_matrix, glm::radians(-10.0f), up);
-			break;
-		case GLFW_KEY_UP:
-			model_matrix = glm::rotate(model_matrix, glm::radians(10.0f), left);
-			break;
-		case GLFW_KEY_DOWN:
-			model_matrix = glm::rotate(model_matrix, glm::radians(-10.0f), left);
-			break;
-		default:
-			break;
+	case GLFW_KEY_ESCAPE:
+		if (action == GLFW_PRESS)
+		{
+			glfwSetWindowShouldClose(window, GL_TRUE);
+		}
+		break;
+	case GLFW_KEY_LEFT:
+		model_matrix = glm::rotate(model_matrix, glm::radians(10.0f), up);
+		break;
+	case GLFW_KEY_RIGHT:
+		model_matrix = glm::rotate(model_matrix, glm::radians(-10.0f), up);
+		break;
+	case GLFW_KEY_UP:
+		model_matrix = glm::rotate(model_matrix, glm::radians(10.0f), left);
+		break;
+	case GLFW_KEY_DOWN:
+		model_matrix = glm::rotate(model_matrix, glm::radians(-10.0f), left);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -128,6 +128,14 @@ void mouseButtonCallback(GLFWwindow* _window, int button, int action, int mods)
 			}
 	}
 }
+
+// Handle window resizing
+void windowSizeCallback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
+	proj_matrix = glm::perspective(45.0f, (float) height / width, 0.1f, 10000.0f);
+}
+
 
 // Vertex data
 int numSpans;
@@ -173,19 +181,22 @@ bool initialize()
 			}
 		}
 
-		// Compute trajectory curve vectors
-		for (int i = 0; i < trajectoryCurve.size() - 1; i++)
-		{
-			trajectoryCurveDiff.push_back(trajectoryCurve[i + 1] - trajectoryCurve[i]);
-			std::cout << "(" << trajectoryCurveDiff[i].x << ", " << trajectoryCurveDiff[i].y << ", " << trajectoryCurveDiff[i].z << ")" << std::endl;
-		}
-
 		vertexDataFile.close();
 	}
 	else
 	{
 		std::cout << "Unable to open file.";
 	}
+
+	// Compute trajectory curve vectors
+	for (int i = 0; i < trajectoryCurve.size() - 1; i++)
+	{
+		trajectoryCurveDiff.push_back(trajectoryCurve[i + 1] - trajectoryCurve[i]);
+		std::cout << "(" << trajectoryCurveDiff[i].x << ", " << trajectoryCurveDiff[i].y << ", " << trajectoryCurveDiff[i].z << ")" << std::endl;
+	}
+
+	// Compute translational span vertices
+	//triangle_vertex_buffer_data = GLfloat[profileCurve.size() * trajectoryCurve.size()];
 
 	/// Initialize GL context and O/S window using the GLFW helper library
 	if (!glfwInit())
@@ -194,7 +205,7 @@ bool initialize()
 		return false;
 	}
 
-	/// Create a window of size 640x480 and with title "Lecture 2: First Triangle"
+	/// Create a window of size 800x800 and with title "Lecture 2: First Triangle"
 	glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
 	window = glfwCreateWindow(width, height, "COMP371: Assignment 1", NULL, NULL);
 	if (!window)
@@ -213,6 +224,9 @@ bool initialize()
 
 	///Regster the mouse button callback function: mouseButtonCallback(...)
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+
+	///Register window resize callback function
+	glfwSetWindowSizeCallback(window, windowSizeCallback);
 
 	glfwMakeContextCurrent(window);
 
@@ -368,8 +382,9 @@ int main()
 
 	// The following commands will talk about our 'vertexbuffer' buffer
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
+
 	// Give our vertices to OpenGL.
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_vertex_buffer_data), triangle_vertex_buffer_data, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(
 		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
