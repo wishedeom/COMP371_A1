@@ -157,6 +157,21 @@ bool initialize()
 			std::cout << "(" << profileCurve[i].x << ", " << profileCurve[i].y << ", " << profileCurve[i].z << ")" << std::endl;
 		}
 
+		vertexDataFile >> numTrajectoryCurvePoints;
+
+		if (numSpans == 0)
+		{
+			for (int i = 0; i < numTrajectoryCurvePoints; i++)
+			{
+				int x, y, z;
+				vertexDataFile >> x;
+				vertexDataFile >> y;
+				vertexDataFile >> z;
+				trajectoryCurve.push_back(glm::vec3(x, y, z));
+				std::cout << "(" << trajectoryCurve[i].x << ", " << trajectoryCurve[i].y << ", " << trajectoryCurve[i].z << ")" << std::endl;
+			}
+		}
+
 		vertexDataFile.close();
 	}
 	else
