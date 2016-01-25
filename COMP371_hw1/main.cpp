@@ -131,22 +131,25 @@ void mouseButtonCallback(GLFWwindow* _window, int button, int action, int mods)
 
 // Vertex data
 int numSpans;
-int numProfileCurvePoints;
-int numTrajectoryCurvePoints;
 
 std::vector<glm::vec3> profileCurve;
 std::vector<glm::vec3> trajectoryCurve;
+std::vector<glm::vec3> trajectoryCurveDiff;
 
 bool initialize()
 {
+	// Open input file
 	std::ifstream vertexDataFile("input_a1.txt");
+
+	int numProfileCurvePoints;
+	int numTrajectoryCurvePoints;
+
 	if (vertexDataFile.is_open())
 	{
-		vertexDataFile >> numSpans;
-		std::cout << numSpans << std::endl; //
-		vertexDataFile >> numProfileCurvePoints;
-		std::cout << numProfileCurvePoints << std::endl; //
+		vertexDataFile >> numSpans; // Read number of spans
+		vertexDataFile >> numProfileCurvePoints; // Read number of points in the profile curve
 
+		// Read profile curve vertices
 		for (int i = 0; i < numProfileCurvePoints; i++)
 		{
 			int x, y, z;
@@ -154,13 +157,12 @@ bool initialize()
 			vertexDataFile >> y;
 			vertexDataFile >> z;
 			profileCurve.push_back(glm::vec3(x, y, z));
-			std::cout << "(" << profileCurve[i].x << ", " << profileCurve[i].y << ", " << profileCurve[i].z << ")" << std::endl;
 		}
 
-		vertexDataFile >> numTrajectoryCurvePoints;
-
+		// For translational sweep
 		if (numSpans == 0)
 		{
+			vertexDataFile >> numTrajectoryCurvePoints;
 			for (int i = 0; i < numTrajectoryCurvePoints; i++)
 			{
 				int x, y, z;
@@ -168,8 +170,14 @@ bool initialize()
 				vertexDataFile >> y;
 				vertexDataFile >> z;
 				trajectoryCurve.push_back(glm::vec3(x, y, z));
-				std::cout << "(" << trajectoryCurve[i].x << ", " << trajectoryCurve[i].y << ", " << trajectoryCurve[i].z << ")" << std::endl;
 			}
+		}
+
+		// Compute trajectory curve vectors
+		for (int i = 0; i < trajectoryCurve.size() - 1; i++)
+		{
+			trajectoryCurveDiff.push_back(trajectoryCurve[i + 1] - trajectoryCurve[i]);
+			std::cout << "(" << trajectoryCurveDiff[i].x << ", " << trajectoryCurveDiff[i].y << ", " << trajectoryCurveDiff[i].z << ")" << std::endl;
 		}
 
 		vertexDataFile.close();
