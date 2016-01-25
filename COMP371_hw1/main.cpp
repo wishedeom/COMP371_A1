@@ -33,8 +33,20 @@ GLuint model_matrix_id = 0;
 GLuint proj_matrix_id = 0;
 
 
+// Constant vectors
+const glm::vec3 center		(0.0f, 0.0f,  0.0f);
+const glm::vec3 up			(0.0f, 1.0f,  0.0f);
+const glm::vec3 initialEye	(0.0f, 0.0f, -1.0f);
+
+// Screen
+int width, height;
+
+// Eye
+
+glm::vec3 eye = initialEye;
+
 ///Transformations
-glm::mat4 proj_matrix;
+glm::mat4 proj_matrix = glm::perspective(60.0f, 1.0f, 0.1f, 10000.0f);
 glm::mat4 view_matrix;
 glm::mat4 model_matrix;
 
@@ -44,28 +56,71 @@ GLuint VBO, VAO, EBO;
 GLfloat point_size = 3.0f;
 
 // An array of 3 vectors which represents 3 vertices
-static const GLfloat g_vertex_buffer_data[] = {
+static const GLfloat g_vertex_buffer_data[] =
+{
 	-0.5f, -0.5f, 0.0f,
-	0.5f, -0.5f, 0.0f,
-	0.0f,  0.5f, 0.0f,
+	 0.5f, -0.5f, 0.0f,
+	 0.0f,  0.5f, 0.0f,
 };
 
 /// Handle the keyboard input
-void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods) {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods)
+{
+	switch (key)
 	{
-		glfwSetWindowShouldClose(window, GL_TRUE);
+		case GLFW_KEY_ESCAPE:
+			if (action == GLFW_PRESS)
+			{
+				glfwSetWindowShouldClose(window, GL_TRUE);
+			}
+			break;
+		default:
+			break;
 	}
 }
 
 /// Handle mouse input
-void cursorPositionCallback(GLFWwindow* _window, double xpos, double ypos) {
+
+bool mouseButtonLeftDown = false;
+double mousePosY = 0;
+double mousePosY_down = 0;
+glm::vec3 eyeMouseDown;
+
+void cursorPositionCallback(GLFWwindow* _window, double xpos, double ypos)
+{
+	mousePosY = ypos;
+
+	if (mouseButtonLeftDown)
+	{
+		eye = (float)((mousePosY - mousePosY_down) / (height / 2) + 1) * eyeMouseDown;
+	}
 }
 
 
-bool initialize() {
+void mouseButtonCallback(GLFWwindow* _window, int button, int action, int mods)
+{
+	switch (button)
+	{
+		case GLFW_MOUSE_BUTTON_LEFT:
+			if (action == GLFW_PRESS)
+			{
+				mouseButtonLeftDown = true;
+				mousePosY_down = mousePosY;
+				eyeMouseDown = eye;
+			}
+			else if (action == GLFW_RELEASE)
+			{
+				mouseButtonLeftDown = false;
+			}
+	}
+}
+
+
+bool initialize()
+{
 	/// Initialize GL context and O/S window using the GLFW helper library
-	if (!glfwInit()) {
+	if (!glfwInit())
+	{
 		fprintf(stderr, "ERROR: could not start GLFW3\n");
 		return false;
 	}
@@ -73,19 +128,22 @@ bool initialize() {
 	/// Create a window of size 640x480 and with title "Lecture 2: First Triangle"
 	glfwWindowHint(GLFW_DOUBLEBUFFER, GL_TRUE);
 	window = glfwCreateWindow(800, 800, "COMP371: Assignment 1", NULL, NULL);
-	if (!window) {
+	if (!window)
+	{
 		fprintf(stderr, "ERROR: could not open window with GLFW3\n");
 		glfwTerminate();
 		return false;
 	}
 
-	int w, h;
-	glfwGetWindowSize(window, &w, &h);
+	glfwGetWindowSize(window, &width, &height);
 	///Register the keyboard callback function: keyPressed(...)
 	glfwSetKeyCallback(window, keyPressed);
 
 	///Regster the mouse cursor position callback function: cursorPositionCallback(...)
 	glfwSetCursorPosCallback(window, cursorPositionCallback);
+
+	///Regster the mouse button callback function: mouseButtonCallback(...)
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
 	glfwMakeContextCurrent(window);
 
@@ -106,7 +164,8 @@ bool initialize() {
 	return true;
 }
 
-bool cleanUp() {
+bool cleanUp()
+{
 	glDisableVertexAttribArray(0);
 	//Properly de-allocate all resources once they've outlived their purpose
 	glDeleteVertexArrays(1, &VAO);
@@ -119,7 +178,8 @@ bool cleanUp() {
 	return true;
 }
 
-GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_path) {
+GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_path)
+{
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 	GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
@@ -127,13 +187,15 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 	// Read the Vertex Shader code from the file
 	std::string VertexShaderCode;
 	std::ifstream VertexShaderStream(vertex_shader_path, std::ios::in);
-	if (VertexShaderStream.is_open()) {
+	if (VertexShaderStream.is_open())
+	{
 		std::string Line = "";
 		while (getline(VertexShaderStream, Line))
 			VertexShaderCode += "\n" + Line;
 		VertexShaderStream.close();
 	}
-	else {
+	else
+	{
 		printf("Impossible to open %s. Are you in the right directory ? Don't forget to read the FAQ !\n", vertex_shader_path.c_str());
 		getchar();
 		exit(-1);
@@ -142,7 +204,8 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 	// Read the Fragment Shader code from the file
 	std::string FragmentShaderCode;
 	std::ifstream FragmentShaderStream(fragment_shader_path, std::ios::in);
-	if (FragmentShaderStream.is_open()) {
+	if (FragmentShaderStream.is_open())
+	{
 		std::string Line = "";
 		while (getline(FragmentShaderStream, Line))
 			FragmentShaderCode += "\n" + Line;
@@ -161,7 +224,8 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 	// Check Vertex Shader
 	glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
 	glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if (InfoLogLength > 0) {
+	if (InfoLogLength > 0)
+	{
 		std::vector<char> VertexShaderErrorMessage(InfoLogLength + 1);
 		glGetShaderInfoLog(VertexShaderID, InfoLogLength, nullptr, &VertexShaderErrorMessage[0]);
 		printf("%s\n", &VertexShaderErrorMessage[0]);
@@ -176,7 +240,8 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 	// Check Fragment Shader
 	glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &Result);
 	glGetShaderiv(FragmentShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if (InfoLogLength > 0) {
+	if (InfoLogLength > 0)
+	{
 		std::vector<char> FragmentShaderErrorMessage(InfoLogLength + 1);
 		glGetShaderInfoLog(FragmentShaderID, InfoLogLength, nullptr, &FragmentShaderErrorMessage[0]);
 		printf("%s\n", &FragmentShaderErrorMessage[0]);
@@ -198,7 +263,8 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 	// Check the program
 	glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
 	glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if (InfoLogLength > 0) {
+	if (InfoLogLength > 0)
+	{
 		std::vector<char> ProgramErrorMessage(InfoLogLength + 1);
 		glGetProgramInfoLog(ProgramID, InfoLogLength, nullptr, &ProgramErrorMessage[0]);
 		printf("%s\n", &ProgramErrorMessage[0]);
@@ -217,7 +283,8 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 }
 
 
-int main() {
+int main()
+{
 
 	initialize();
 
@@ -246,7 +313,10 @@ int main() {
 
 
 
-	while (!glfwWindowShouldClose(window)) {
+	while (!glfwWindowShouldClose(window))
+	{
+		view_matrix = glm::lookAt(eye, center, up);
+
 		// wipe the drawing surface clear
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearColor(0.1f, 0.2f, 0.2f, 1.0f);
