@@ -133,7 +133,7 @@ void mouseButtonCallback(GLFWwindow* _window, int button, int action, int mods)
 void windowSizeCallback(GLFWwindow* window, int width, int height)
 {
 	glViewport(0, 0, width, height);
-	proj_matrix = glm::perspective(45.0f, (float) height / width, 0.1f, 10000.0f);
+	proj_matrix = glm::perspective(45.0f, 1.0f, 0.1f, 10000.0f);
 }
 
 
@@ -149,16 +149,16 @@ bool initialize()
 	// Open input file
 	std::ifstream vertexDataFile("input_a1.txt");
 
-	int numProfileCurvePoints;
-	int numTrajectoryCurvePoints;
+	int numProfileCurveVertices;
+	int numTrajectoryCurveVertices;
 
 	if (vertexDataFile.is_open())
 	{
 		vertexDataFile >> numSpans; // Read number of spans
-		vertexDataFile >> numProfileCurvePoints; // Read number of points in the profile curve
+		vertexDataFile >> numProfileCurveVertices; // Read number of points in the profile curve
 
 		// Read profile curve vertices
-		for (int i = 0; i < numProfileCurvePoints; i++)
+		for (int i = 0; i < numProfileCurveVertices; i++)
 		{
 			int x, y, z;
 			vertexDataFile >> x;
@@ -170,8 +170,8 @@ bool initialize()
 		// For translational sweep
 		if (numSpans == 0)
 		{
-			vertexDataFile >> numTrajectoryCurvePoints;
-			for (int i = 0; i < numTrajectoryCurvePoints; i++)
+			vertexDataFile >> numTrajectoryCurveVertices;
+			for (int i = 0; i < numTrajectoryCurveVertices; i++)
 			{
 				int x, y, z;
 				vertexDataFile >> x;
@@ -189,11 +189,12 @@ bool initialize()
 	}
 
 	// Compute trajectory curve vectors
-	for (int i = 0; i < trajectoryCurve.size() - 1; i++)
+	for (auto trajectoryCurvePoint : trajectoryCurve)
 	{
-		trajectoryCurveDiff.push_back(trajectoryCurve[i + 1] - trajectoryCurve[i]);
+		trajectoryCurveDiff.push_back(trajectoryCurvePoint - trajectoryCurve[0]);
 	}
 
+	// Compute translational sweep vertices
 	static std::vector<glm::vec3> translationalSweep = profileCurve;
 	for (auto trajectoryVector : trajectoryCurveDiff)
 	{
@@ -203,15 +204,28 @@ bool initialize()
 		}
 	}
 
-	// Test
-	for (auto vector : translationalSweep)
+
+	// Put each coordinate into a vector
+	static std::vector<GLfloat> translationalSweepCoordinates;
+	for (auto vertex : translationalSweep)
 	{
-		std::cout << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+		translationalSweepCoordinates.push_back(vertex.x);
+		translationalSweepCoordinates.push_back(vertex.y);
+		translationalSweepCoordinates.push_back(vertex.z);
+	}
+
+	// Put vector data into array
+	auto vertexBufferData = translationalSweepCoordinates.data();
+
+	// Test
+	for (auto c : translationalSweepCoordinates)
+	{
+		std::cout << c << std::endl;
 	}
 	// End test
 
 	// Compute translational span vertices
-	//triangle_vertex_buffer_data = GLfloat[profileCurve.size() * trajectoryCurve.size()];
+	//auto vertex_buffer_data = translationalSweep.data();
 
 	/// Initialize GL context and O/S window using the GLFW helper library
 	if (!glfwInit())
