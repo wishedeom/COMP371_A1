@@ -53,26 +53,10 @@ glm::mat4 view_matrix(1.0);
 glm::mat4 model_matrix;
 
 // Vertex buffer data
-GLfloat* vertexBufferData;
 
 GLuint VBO, VAO, EBO;
 
 GLfloat point_size = 3.0f;
-
-// An array of 3 vectors which represents 3 vertices
-const GLfloat triangle_vertex_buffer_data[] =
-{
-	-0.5f,	-0.5f,	0.0f,
-	-0.5f,	 0.5f,	0.0f,
-	 0.5f,	-0.5f,	0.0f,
-	 0.5f,	 0.5f,	0.0f
-};
-
-const GLuint indices[] =
-{
-	0, 2, 3,
-	0, 3, 1
-};
 
 /// Handle the keyboard input
 void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods)
@@ -148,7 +132,7 @@ void windowSizeCallback(GLFWwindow* window, int width, int height)
 
 glm::vec3 readVertex(std::ifstream* const file)
 {
-	int x, y, z;
+	GLfloat	 x, y, z;
 	*file >> x;
 	*file >> y;
 	*file >> z;
@@ -196,9 +180,9 @@ std::vector<glm::vec3> readPolyline(std::ifstream* const file, const int numLine
 
 // Given a number of profile polyline vertices p and a number of trajectory polyline vertices t, computes the array of vertex indices to draw each triangle in the
 // translational sweep.
-GLuint* computeSweepIndices(const int p, const int t)
+std::vector<GLuint> computeSweepIndices(const int p, const int t)
 {
-	std::vector<GLuint> indices;
+	static std::vector<GLuint> indices;
 	for (int i = 0; i < p - 1; i++)
 	{
 		for (int j = 0; j < t - 1; j++)
@@ -220,7 +204,7 @@ GLuint* computeSweepIndices(const int p, const int t)
 			indices.push_back(upperLeft);
 		}
 	}
-	return indices.data();
+	return indices;
 }
 
 
@@ -255,6 +239,8 @@ std::vector<glm::vec3> computeTranslationalSweep(const std::vector<glm::vec3> pr
 	return translationalSweep;
 }
 
+int numProfilePolylineVertices;
+int numTrajectoryPolylineVertices;
 
 // Given an input filename, opens the file and reads sweep vertex data from it.
 std::vector<glm::vec3> readSweep(const std::string filename)
@@ -265,8 +251,6 @@ std::vector<glm::vec3> readSweep(const std::string filename)
 	if (vertexDataFile.is_open())
 	{
 		int numSpans;
-		int numProfilePolylineVertices;
-		int numTrajectoryPolylineVertices;
 
 		vertexDataFile >> numSpans;						// Read number of spans: 0 for translational sweep, positive for rotational sweep
 
@@ -297,7 +281,7 @@ std::vector<glm::vec3> readSweep(const std::string filename)
 }
 
 
-GLfloat* getCoordinateArray(const std::vector<glm::vec3> sweep)
+std::vector<GLfloat> getCoordinateArray(const std::vector<glm::vec3> sweep)
 {
 	std::vector<GLfloat> sweepCoordinates;
 	for (auto vertex : sweep)
@@ -306,7 +290,9 @@ GLfloat* getCoordinateArray(const std::vector<glm::vec3> sweep)
 		sweepCoordinates.push_back(vertex.y);
 		sweepCoordinates.push_back(vertex.z);
 	}
-	return sweepCoordinates.data();
+	GLfloat* coordinateArray;
+	coordinateArray = sweepCoordinates.data();
+	return sweepCoordinates;
 }
 
 
@@ -482,47 +468,33 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 
 int main()
 {
-	auto sweep = readSweep(INPUT_FILE);				// Compute sweep vertices
-	vertexBufferData = getCoordinateArray(sweep);	// Put sweep vertices into array
-
-	// Test
-	for (int i = 0; i < (sizeof(vertexBufferData) / sizeof(*vertexBufferData)); i++)
-	{
-		std::cout << vertexBufferData[i] << std::endl;
-	}
-	// End test
+	auto sweep = readSweep(INPUT_FILE);					// Compute sweep vertices
+	auto verticesVector = getCoordinateArray(sweep);	
+	auto vertices = verticesVector.data();			// Put sweep vertices into array
+	auto indicesVector = computeSweepIndices(numProfilePolylineVertices, numTrajectoryPolylineVertices);
+	GLuint *indices = indicesVector.data();
 
 	initialize();
 
-	///Load the shaders
 	shader_program = loadShaders("COMP371_hw1.vs", "COMP371_hw1.fs");
 
-	// Generate 1 buffer, put the resulting identifier in vertexbuffer
+	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 	glGenBuffers(1, &EBO);
+	
+	glBindVertexArray(VAO);
 
-	// The following commands will talk about our 'vertexbuffer' buffer
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-	// Give our vertices to OpenGL.
-	glBufferData(GL_ARRAY_BUFFER, sizeof(triangle_vertex_buffer_data), triangle_vertex_buffer_data, GL_STATIC_DRAW);
-
-	//
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-	//
-
+	
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*) 0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(
-		0,						// attribute 0. No particular reason for 0, but must match the layout in the shader.
-		3,						// size
-		GL_FLOAT,				// type
-		GL_FALSE,				// normalized?
-		3 * sizeof(GLuint),		// stride
-		(GLvoid*) 0				// array buffer offset
-		);
 
-
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -542,7 +514,7 @@ int main()
 
 		glBindVertexArray(VAO);
 		// Draw the triangle !
-		glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(*indices), GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		glBindVertexArray(0);
 
