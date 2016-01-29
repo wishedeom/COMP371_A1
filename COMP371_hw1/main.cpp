@@ -167,6 +167,62 @@ std::vector<glm::vec3> readPolyline(std::ifstream* const file, const int numLine
 	return polyline;
 }
 
+// The translational sweep is made from a profile polyline with p vertices and a trajectory polyline with t vertices, for a total of p * t vertices. The sweep itself
+// consists of (p - 1) * (t - 1) recangles, paramaterized from 0 to p - 2 along the profile curve and from 0 to t - 2 along the trajectory curve. Since the
+// vertices are numbered starting from 0 and increasing along the profile curve, then the trajectory curve, the vertex indices for the four vertices of rectange (i, j) are
+// as follows.
+//
+//		 upper left (UL)		  upper right (UR)
+//		(i + (j + 1) * p)		(i + (j + 1) * p + 1)
+//				*-----------------------*
+//				|                   /	|
+//				|                /		|
+//				|             /			|
+//				|          /			|
+//				|        /				|
+//				|     /					|
+//				|  /					|
+//				*-----------------------*
+//			(i + j * p)			(i + p * j + 1)
+//		  lower left (LL)		lower right (LR)
+//
+// The vertices for the triangles to draw are
+//
+//		LL -> LR -> UR
+//			then
+//		LL -> UR -> UL
+//
+// This is done for each rectangle of the translational sweep mesh.
+
+// Given a number of profile polyline vertices p and a number of trajectory polyline vertices t, computes the array of vertex indices to draw each triangle in the
+// translational sweep.
+GLuint* computeSweepIndices(const int p, const int t)
+{
+	std::vector<GLuint> indices;
+	for (int i = 0; i < p - 1; i++)
+	{
+		for (int j = 0; j < t - 1; j++)
+		{
+			// Vertices of rectangle (i, j)
+			const GLuint lowerLeft	= i + j	* p;
+			const GLuint lowerRight	= i + j	* p + 1;
+			const GLuint upperLeft	= i + (j + 1) * p;
+			const GLuint upperRight	= i + (j + 1) * p + 1;
+
+			// Lower triangle
+			indices.push_back(lowerLeft);
+			indices.push_back(lowerRight);
+			indices.push_back(upperRight);
+
+			// Upper triangle
+			indices.push_back(lowerLeft);
+			indices.push_back(upperRight);
+			indices.push_back(upperLeft);
+		}
+	}
+	return indices.data();
+}
+
 
 // Given a std::vector of 3D vectors representing vertices of a polyline (curve), computes the displacement of each vertex from the first vertex.
 std::vector<glm::vec3> computeDisplacements(const std::vector<glm::vec3> polyline)
