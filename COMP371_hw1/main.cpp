@@ -23,7 +23,7 @@
 
 #define M_PI        3.14159265358979323846264338327950288f   /* pi */
 #define DEG_TO_RAD	M_PI/180.0f
-#define INPUT_FILE	"input_a1.txt"
+const std::string inputFile = "input_a1.txt";
 
 GLFWwindow* window = 0x00;
 
@@ -468,11 +468,28 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 
 int main()
 {
-	auto sweep = readSweep(INPUT_FILE);					// Compute sweep vertices
+	/*
+	GLfloat vertices[] =
+	{
+		0.5f,  0.5f, 0.0f,  // Top Right
+		0.5f, -0.5f, 0.0f,  // Bottom Right
+		-0.5f, -0.5f, 0.0f,  // Bottom Left
+		-0.5f,  0.5f, 0.0f   // Top Left 
+	};
+
+	GLuint indices[] =
+	{
+		0, 1, 3,  // First Triangle
+		1, 2, 3   // Second Triangle
+	};
+	*/
+
+	
+	auto sweep = readSweep(inputFile);					// Compute sweep vertices
 	auto verticesVector = getCoordinateArray(sweep);	
-	auto vertices = verticesVector.data();			// Put sweep vertices into array
+	auto vertices = verticesVector.data();				// Put sweep vertices into array
 	auto indicesVector = computeSweepIndices(numProfilePolylineVertices, numTrajectoryPolylineVertices);
-	GLuint *indices = indicesVector.data();
+	auto indices = indicesVector.data();
 
 	initialize();
 
