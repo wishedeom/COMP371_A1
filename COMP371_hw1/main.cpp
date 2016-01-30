@@ -58,6 +58,11 @@ GLuint VBO, VAO, EBO;
 
 GLfloat point_size = 3.0f;
 
+// number of vertices/spans
+int numProfilePolylineVertices;
+int numTrajectoryPolylineVertices;
+int numSpans;
+
 /// Handle the keyboard input
 void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods)
 {
@@ -158,15 +163,15 @@ std::vector<glm::vec3> readPolyline(std::ifstream* const file, const int numLine
 //
 //		 upper left (UL)		  upper right (UR)
 //		(i + (j + 1) * p)		(i + (j + 1) * p + 1)
-//				*-----------------------*
+//				*----------<------------*
 //				|                   /	|
 //				|                /		|
 //				|             /			|
-//				|          /			|
-//				|        /				|
+//				|          ^			|
+//				|        /			    ^
 //				|     /					|
 //				|  /					|
-//				*-----------------------*
+//				*----------->-----------*
 //			(i + j * p)			(i + p * j + 1)
 //		  lower left (LL)		lower right (LR)
 //
@@ -227,7 +232,7 @@ std::vector<glm::vec3> computeDisplacements(const std::vector<glm::vec3> polylin
 std::vector<glm::vec3> computeTranslationalSweep(const std::vector<glm::vec3> profilePolyline, const std::vector<glm::vec3> trajectoryPolyline)
 {
 	const auto trajectoryCurveDisplacements = computeDisplacements(trajectoryPolyline);	// Compute trajectory curve displacements.
-	static std::vector<glm::vec3> translationalSweep;	// To hold translational sweep vertices.
+	std::vector<glm::vec3> translationalSweep;	// To hold translational sweep vertices.
 	for (auto displacement : trajectoryCurveDisplacements)
 	{
 		for (auto profileVertex : profilePolyline)
@@ -239,8 +244,36 @@ std::vector<glm::vec3> computeTranslationalSweep(const std::vector<glm::vec3> pr
 	return translationalSweep;
 }
 
-int numProfilePolylineVertices;
-int numTrajectoryPolylineVertices;
+std::vector<glm::vec3> rotatePolyline(const std::vector<glm::vec3> polyline, const GLfloat angle)
+{
+	const auto rotationMatrix = glm::rotate(glm::mat4(1.0), angle, up);
+	std::vector<glm::vec3> rotatedPolyline;
+	for (auto vertex : polyline)
+	{
+		rotatedPolyline.push_back(glm::vec3(rotationMatrix * glm::vec4(vertex, 0.0)));
+	}
+	return rotatedPolyline;
+}
+
+std::vector<glm::vec3> computeRotationalSweep(const std::vector<glm::vec3> profilePolyline, const int numSpans)
+{
+	const GLfloat angle = 2 * M_PI / numSpans;
+	std::vector<glm::vec3> rotationalSweep;
+	for (int i = 0; i <= numSpans + 1; i++)
+	{
+		auto rotatedPolyline = rotatePolyline(profilePolyline, angle * i);
+		for (auto vertex : rotatedPolyline)
+		{
+			rotationalSweep.push_back(vertex);
+		}
+	}
+	return rotationalSweep;
+}
+
+std::string vec3ToString(const glm::vec3 v)
+{
+	return "(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ")";
+}
 
 // Given an input filename, opens the file and reads sweep vertex data from it.
 std::vector<glm::vec3> readSweep(const std::string filename)
@@ -250,8 +283,6 @@ std::vector<glm::vec3> readSweep(const std::string filename)
 
 	if (vertexDataFile.is_open())
 	{
-		int numSpans;
-
 		vertexDataFile >> numSpans;						// Read number of spans: 0 for translational sweep, positive for rotational sweep
 
 		vertexDataFile >> numProfilePolylineVertices;	// Read number of points in the profile polyline
@@ -266,8 +297,8 @@ std::vector<glm::vec3> readSweep(const std::string filename)
 		}
 		else
 		{
-			// TO-DO:
-			// return rotational sweep
+			sweep = computeRotationalSweep(profilePolyline, numSpans);
+			numTrajectoryPolylineVertices = numSpans + 1;
 		}
 
 		vertexDataFile.close();
@@ -468,23 +499,22 @@ GLuint loadShaders(std::string vertex_shader_path, std::string fragment_shader_p
 
 int main()
 {
-	/*
-	GLfloat vertices[] =
+	//TEST
+	std::vector<glm::vec3> polyline;
+	polyline.push_back(glm::vec3(1.0, 0.0, 0.0));
+	auto rotationalSweep = computeRotationalSweep(polyline, 4);
+	for (auto vertex : polyline)
 	{
-		0.5f,  0.5f, 0.0f,  // Top Right
-		0.5f, -0.5f, 0.0f,  // Bottom Right
-		-0.5f, -0.5f, 0.0f,  // Bottom Left
-		-0.5f,  0.5f, 0.0f   // Top Left 
-	};
-
-	GLuint indices[] =
+		std::cout << vec3ToString(vertex);
+	}
+	std::cout << std::endl;
+	for (auto vertex : rotationalSweep)
 	{
-		0, 1, 3,  // First Triangle
-		1, 2, 3   // Second Triangle
-	};
-	*/
+		std::cout << vec3ToString(vertex);
+	}
+	std::cout << std::endl;
+	//END TEST
 
-	
 	auto sweep = readSweep(inputFile);					// Compute sweep vertices
 	auto verticesVector = getCoordinateArray(sweep);	
 	auto vertices = verticesVector.data();				// Put sweep vertices into array
@@ -494,6 +524,8 @@ int main()
 	initialize();
 
 	shader_program = loadShaders("COMP371_hw1.vs", "COMP371_hw1.fs");
+
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -530,8 +562,8 @@ int main()
 		glUniformMatrix4fv(model_matrix_id, 1, GL_FALSE, glm::value_ptr(model_matrix));
 
 		glBindVertexArray(VAO);
-		// Draw the triangle !
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		// Draw the triangles !
+		glDrawElements(GL_TRIANGLES, indicesVector.size(), GL_UNSIGNED_INT, 0);
 
 		glBindVertexArray(0);
 
