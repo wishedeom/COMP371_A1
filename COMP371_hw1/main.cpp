@@ -22,7 +22,7 @@
 //using namespace std;
 
 #define M_PI        3.14159265358979323846264338327950288f   /* pi */
-#define DEG_TO_RAD	M_PI/180.0f
+#define DEG_TO_RAD	M_PI / 180.0f
 const std::string inputFile = "input_a1.txt";
 
 GLFWwindow* window = 0x00;
@@ -54,7 +54,7 @@ glm::mat4 model_matrix;
 
 // Vertex buffer data
 
-GLuint VBO, VAO, EBO;
+GLuint VBO, VAO, EBO, colorBuffer;
 
 GLfloat point_size = 3.0f;
 
@@ -86,6 +86,15 @@ void keyPressed(GLFWwindow *_window, int key, int scancode, int action, int mods
 	case GLFW_KEY_DOWN:
 		model_matrix = glm::rotate(model_matrix, glm::radians(-10.0f), left);
 		break;
+	case GLFW_KEY_W:
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		break;
+	case GLFW_KEY_T:
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		break;
+	case GLFW_KEY_P:
+		glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+		break;
 	default:
 		break;
 	}
@@ -108,7 +117,7 @@ void cursorPositionCallback(GLFWwindow* _window, double xpos, double ypos)
 	}
 }
 
-
+// Mouse controls
 void mouseButtonCallback(GLFWwindow* _window, int button, int action, int mods)
 {
 	switch (button)
@@ -135,6 +144,7 @@ void windowSizeCallback(GLFWwindow* window, int width, int height)
 }
 
 
+// Gets a single vertex from input file
 glm::vec3 readVertex(std::ifstream* const file)
 {
 	GLfloat	 x, y, z;
@@ -244,6 +254,7 @@ std::vector<glm::vec3> computeTranslationalSweep(const std::vector<glm::vec3> pr
 	return translationalSweep;
 }
 
+// Rotates a polylien once by a given angle
 std::vector<glm::vec3> rotatePolyline(const std::vector<glm::vec3> polyline, const GLfloat angle)
 {
 	const auto rotationMatrix = glm::rotate(glm::mat4(1.0), angle, up);
@@ -255,6 +266,7 @@ std::vector<glm::vec3> rotatePolyline(const std::vector<glm::vec3> polyline, con
 	return rotatedPolyline;
 }
 
+// Produces a rotational sweep froma  profile curve and number of spans
 std::vector<glm::vec3> computeRotationalSweep(const std::vector<glm::vec3> profilePolyline, const int numSpans)
 {
 	const GLfloat angle = 2 * M_PI / numSpans;
@@ -270,6 +282,7 @@ std::vector<glm::vec3> computeRotationalSweep(const std::vector<glm::vec3> profi
 	return rotationalSweep;
 }
 
+// For testing purposes
 std::string vec3ToString(const glm::vec3 v)
 {
 	return "(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z) + ")";
@@ -311,7 +324,7 @@ std::vector<glm::vec3> readSweep(const std::string filename)
 	return sweep;
 }
 
-
+// Flattens a polyline's vertices into individual coordinates
 std::vector<GLfloat> getCoordinateArray(const std::vector<glm::vec3> sweep)
 {
 	std::vector<GLfloat> sweepCoordinates;
@@ -326,6 +339,25 @@ std::vector<GLfloat> getCoordinateArray(const std::vector<glm::vec3> sweep)
 	return sweepCoordinates;
 }
 
+// Generates a color whose redness depends on the vertex's z-coordinate in screen space.
+glm::vec3 genVertexColor(const glm::vec3 vertex)
+{
+	const GLfloat red = std::max(0.0f, std::min(vertex.z, 1.0f)); // Clips redness to be between 0 and 1.
+	const GLfloat radius = std::sqrt(vertex.x * vertex.x + vertex.y * vertex.y);
+	const GLfloat green = std::max(0.0f, std::min(radius, 1.0f)) * 0.15f;
+	return glm::vec3(red, green, 1.0f - red);
+}
+
+// Generates a color for each vertex of a sweep
+std::vector<glm::vec3> genSweepColors(const std::vector <glm::vec3> sweep)
+{
+	std::vector<glm::vec3> colors;
+	for (auto vertex : sweep)
+	{
+		colors.push_back(genVertexColor(vertex));
+	}
+	return colors;
+}
 
 bool initialize()
 {
@@ -520,6 +552,8 @@ int main()
 	auto vertices = verticesVector.data();				// Put sweep vertices into array
 	auto indicesVector = computeSweepIndices(numProfilePolylineVertices, numTrajectoryPolylineVertices);
 	auto indices = indicesVector.data();
+	auto colorsVector = getCoordinateArray(genSweepColors(sweep));
+	auto colors = colorsVector.data();
 
 	initialize();
 
@@ -530,6 +564,7 @@ int main()
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 	glGenBuffers(1, &EBO);
+	glGenBuffers(1, &colorBuffer);
 	
 	glBindVertexArray(VAO);
 
@@ -538,9 +573,16 @@ int main()
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices) * indicesVector.size(), indices, GL_STATIC_DRAW);
-	
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*) 0);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*) 0);	// Vertices
 	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(colors) * colorsVector.size(), colors, GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
