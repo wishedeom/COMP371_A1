@@ -339,12 +339,12 @@ std::vector<GLfloat> getCoordinateArray(const std::vector<glm::vec3> sweep)
 	return sweepCoordinates;
 }
 
-// Generates a color whose redness depends on the vertex's z-coordinate in screen space.
+// Generates a color whose redness depends on the vertex's y-coordinate in screen space.
 glm::vec3 genVertexColor(const glm::vec3 vertex)
 {
-	const GLfloat red = std::max(0.0f, std::min(vertex.z, 1.0f)); // Clips redness to be between 0 and 1.
-	const GLfloat radius = std::sqrt(vertex.x * vertex.x + vertex.y * vertex.y);
-	const GLfloat green = std::max(0.0f, std::min(radius, 1.0f)) * 0.15f;
+	const GLfloat red = std::max(0.0f, std::min(vertex.y, 1.0f)); // Clips redness to be between 0 and 1.
+	const GLfloat radius = std::sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
+	const GLfloat green = std::max(0.0f, std::min(radius, 1.0f)) * 0.2f;
 	return glm::vec3(red, green, 1.0f - red);
 }
 
